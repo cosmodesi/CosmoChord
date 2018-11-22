@@ -2820,7 +2820,7 @@
         adot0=adot
     end do !i
 
-    if (CP%Reion%Reionization .and. (xe(nthermo) < 0.999d0)) then
+    if (CP%Reion%Reionization .and. (xe(nthermo) < 0.999d0) .and. FeedbackLevel > 1) then
         write(*,*)'Warning: xe at redshift zero is < 1'
         write(*,*) 'Check input parameters and Reionization_xe'
         write(*,*) 'function in the Reionization module'
