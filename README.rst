@@ -25,6 +25,9 @@ Installation procedure:
    export OMP_NUM_THREADS=1
    ./cosmomc test.ini
 
+To run, you should add ``action=5``  to your ini file, and include
+``batch3/polychord.ini``. Consider modifying ``test.ini``
+
 Changes
 =======
 You can see the key changes by running:

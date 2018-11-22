@@ -16,9 +16,6 @@ rm -f COM_Likelihood_Data-baseline_R2.00.tar.gz
 
 make
 
-export OMP_NUM_THREADS=1
-echo "nlive=5" >> test.ini
-echo "max_ndead=0" >> test.ini
 mpirun -np 1 --allow-run-as-root ./cosmomc test.ini
 
 mpirun -np 1 --allow-run-as-root ./cosmomc test_planck.ini
