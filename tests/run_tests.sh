@@ -16,6 +16,7 @@ rm -f COM_Likelihood_Data-baseline_R2.00.tar.gz
 
 make
 
+export OMP_NUM_THREADS=1
 mpirun -np 1 --allow-run-as-root ./cosmomc test.ini
 
 mpirun -np 1 --allow-run-as-root ./cosmomc test_planck.ini
