@@ -134,6 +134,10 @@ F90FLAGS += -DPICO $(shell python -c "import pypico; print pypico.get_include()"
 endif
 endif
 
+#PolyChord Library
+LIB_NS =../polychord
+LINKFLAGS += -L$(LIB_NS) -lchord
+F90FLAGS += $(IFLAG)$(LIB_NS)
 
 UTILS = $(OUTPUT_DIR)/MiscUtils.o $(OUTPUT_DIR)/ArrayUtils.o $(OUTPUT_DIR)/StringUtils.o $(OUTPUT_DIR)/MpiUtils.o $(OUTPUT_DIR)/FileUtils.o \
     $(OUTPUT_DIR)/RandUtils.o $(OUTPUT_DIR)/ObjectLists.o $(OUTPUT_DIR)/Interpolation.o
@@ -179,7 +183,7 @@ DATAMODULES += $(OUTPUT_DIR)/wl.o
 
 COSMOFILES = $(OUTPUT_DIR)/CosmologyTypes.o $(OUTPUT_DIR)/CosmoTheory.o $(OUTPUT_DIR)/bbn.o $(OUTPUT_DIR)/Calculator_Cosmology.o \
 	$(OUTPUT_DIR)/CalcLike_Cosmology.o $(OUTPUT_DIR)/Likelihood_Cosmology.o $(CALCFILES) $(DATAMODULES) $(PARAMETERIZATION) $(LIKEFILES) \
-	$(OUTPUT_DIR)/CosmologyConfig.o
+	$(OUTPUT_DIR)/CosmologyConfig.o $(OUTPUT_DIR)/nestwrap.o
 
 OBJFILES += $(COSMOFILES) $(OUTPUT_DIR)/driver.o
 
@@ -231,6 +235,8 @@ $(OUTPUT_DIR)/minimize.o: $(OUTPUT_DIR)/PowellConstrainedMinimize.o $(OUTPUT_DIR
 $(OUTPUT_DIR)/SampleCollector.o: $(OUTPUT_DIR)/MCMC.o
 $(OUTPUT_DIR)/GeneralSetup.o: $(OUTPUT_DIR)/SampleCollector.o $(OUTPUT_DIR)/ImportanceSampling.o  $(OUTPUT_DIR)/minimize.o
 
+$(OUTPUT_DIR)/nestwrap.o: $(OUTPUT_DIR)/GeneralSetup.o $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/BaseParameters.o 
+
 $(OUTPUT_DIR)/driver.o: $(OUTPUT_DIR)/GeneralSetup.o $(OUTPUT_DIR)/CosmologyConfig.o
 
 $(PARAMETERIZATION): $(OUTPUT_DIR)/ParamSet.o $(OUTPUT_DIR)/bbn.o  $(OUTPUT_DIR)/Calculator_Cosmology.o
@@ -275,7 +281,7 @@ F90FLAGS += $(IFLAG)$(cfitsio)/include $(IFLAG)$(WMAP) -DWMAP
 LINKFLAGS +=  -L$(cfitsio)/lib -L$(WMAP) -lcfitsio -lwmap9
 endif
 
-F90FLAGS += $(MODOUT) $(IFLAG)$(OUTPUT_DIR)/
+F90FLAGS += $(MODOUT) $(IFLAG)$(OUTPUT_DIR)/  $(IFLAG)$(LIB_NS) 
 
 export FFLAGS
 export F90C
@@ -298,20 +304,23 @@ $(OUTPUT_DIR)/%.o: %.F90 Makefile
 $(OUTPUT_DIR)/fpico_interface.o: $(PICO)/fpico_interface.f90 Makefile
 	$(F90C) $(F90FLAGS) -c $(PICO)/fpico_interface.f90 -o $(OUTPUT_DIR)/fpico_interface.o
 
-cosmomc: directories camb $(OBJFILES)
+cosmomc: directories polychord camb $(OBJFILES)
 	$(F90C) -o ../cosmomc $(OBJFILES) $(LINKFLAGS) $(F90FLAGS)
 
-cosmomc_debug: directories camb $(OBJFILES)
+cosmomc_debug: directories polychord camb $(OBJFILES)
 	$(F90C) -o ../cosmomc_debug $(OBJFILES) $(LINKFLAGS) $(F90FLAGS)
 
 
-clean: cleancosmomc
+clean: cleancosmomc cleanpolychord
 	cd ../camb; make clean
 
 cleancosmomc:
 	rm -f $(OUTPUT_DIR)/*.o $(OUTPUT_DIR)/*.mod ../core
 	rm -rf Release*
 	rm -rf Debug*
+
+cleanpolychord:
+	cd $(LIB_NS); $(MAKE) clean
 
 getdist: directories $(DISTFILES)
 	$(F90C) -o ../getdist $(DISTFILES) $(LAPACKL) $(GETDISTFLAGS)
@@ -320,6 +329,9 @@ camb:
 	cd ../camb && \
 	$(MAKE) --file=Makefile_main libcamb OUTPUT_DIR=$(OUTPUT_DIR) \
 	RECOMBINATION=$(RECOMBINATION) EQUATIONS=equations_ppf NONLINEAR=halofit_ppf
+
+polychord:
+	cd $(LIB_NS); $(MAKE) all BUILD=$(BUILD)
 
 $(highL)/libhigh.a:
 	cd $(highL); make libhigh.a;
