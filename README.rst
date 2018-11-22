@@ -1,49 +1,47 @@
 ===================
-CosmoMC
+CosmoChord
 ===================
-:CosmoMC:  Fortran 2008 parallelized MCMC sampler (general and cosmology)
-:Homepage: http://cosmologist.info/cosmomc/
+:CosmoChord:  PolyChord + CosmoMC for cosmological parameter estimation and evidence calculation
+:Author: Will Handley
+:ForkedFrom: https://github.com/cmbant/CosmoMC
+:Homepage: http://polychord.co.uk
+
+.. image:: https://travis-ci.org/williamjameshandley/CosmoChord.svg?branch=master
+    :target: https://travis-ci.org/williamjameshandley/CosmoChord
 
 Description and installation
 =============================
 
-For full details see the `ReadMe <http://cosmologist.info/cosmomc/readme.html>`_.
+CosmoChord is a fork of `CosmoMC <https://github.com/cmbant/CosmoMC>`__, which
+adds nested sampling provided by PolyChord.
 
-Algorithm details
-==================
+Installation procedure:
 
-See the latest `paper <http://arxiv.org/abs/1304.4473>`_.
+.. bash::
+   
+   git clone https://github.com/williamjameshandley/CosmoChord
+   cd CosmoChord
+   make
+   export OMP_NUM_THREADS=1
+   ./cosmomc test.ini
 
-GetDist
-===================
+Changes
+=======
+You can see the key changes by running:
 
-CosmoMC includes the GetDist python sample analysis and plotting package, which is
-also `available separately <http://getdist.readthedocs.org/en/latest/>`_.
+.. bash::
+   git remote add upstream https://github.com/cmbant/CosmoMC
+   git fetch upstream
+   git diff --stat upstream/master
+   git diff  upstream/master source 
+   git diff  upstream/master camb 
 
-Branches
-=============================
 
-The master branch contains latest changes to the main release version.
+The changes to CosmoMC are minor:
 
-.. image:: https://secure.travis-ci.org/cmbant/CosmoMC.png?branch=master
-  :target: https://secure.travis-ci.org/cmbant/CosmoMC/builds
-
-The devel branch is a development version, using CAMB devel branch which integrates 
-CAMB and CAMB sources (though CAMB sources functions are not available via CosmoMC yet).
-Includes run-time changing of dark energy model between fluid and PPF modes (easily extended).
-Shared general function now taken from the `forutils <https://github.com/cmbant/forutils>`_ library.
-
-.. image:: https://secure.travis-ci.org/cmbant/CosmoMC.png?branch=devel
-  :target: https://secure.travis-ci.org/cmbant/CosmoMC/builds
-
-Both branches now have a travis unit test to check they work with the Planck 2015 data. The test
-does a test install of forutils, CosmoMC and the Planck likelihood code and checks the likelihood is as expected.
-See tests/run_tests.sh for the setup and test code. There are small changes in the absolute likelihood value between branches
-due to small changes in the CAMB version (e.g. implied optical depth changes very slightly due to changes in time sampling).
-
-=============
-
-.. raw:: html
-
-    <a href="http://www.sussex.ac.uk/astronomy/"><img src="https://cdn.cosmologist.info/antony/Sussex.png" height="170px"></a>
-    <a href="http://erc.europa.eu/"><img src="https://erc.europa.eu/sites/default/files/content/erc_banner-vertical.jpg" height="200px"></a>
+- Nested sampling heavily samples the tails of the posterior. This means that
+  there need to be more corrections for these regions that are typically
+  unexplored by the default metropolis hastings tool.
+- You should **not** use openmp parallelisation, as this in inefficient when
+  using PolyChord. Instead, you should use pure MPI parallelisation, and you
+  may use as many cores as you have live points.
