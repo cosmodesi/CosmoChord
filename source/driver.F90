@@ -118,7 +118,6 @@
         test_used_params = Ini%Read_String('test_used_params') !If not specified, just take from central value
         test_check_compare = Ini%Read_Double('test_check_compare',logZero)
     else if (Setup%action==action_PolyChord) then	
-        !nest_resume = Ini%Read_Logical('checkpoint',.false.)
         rootname = baseroot
     end if
 
@@ -209,8 +208,6 @@
 
     !read the PolyChord parameters
     if (Setup%action==action_PolyChord) then
-        !$ call OMP_GET_NUM_THREADS(num_threads)
-        if (num_threads /=1) call DoAbort('Do not run PolyChord with OMP_NUM_THREADS>1, run with pure MPI') 
         call Initialise_PolyChord_Settings(Ini)
     end if
 
