@@ -312,10 +312,6 @@
 
 
     if (abs(tau - Reion%optical_depth) > 0.002 .and. global_error_flag==0) then
-        if(FeedbackLevel>1) write (*,*) 'Reionization_zreFromOptDepth: Did not converge to optical depth'
-        if(FeedbackLevel>1) write (*,*) 'tau =',tau, 'optical_depth = ', Reion%optical_depth
-        if(FeedbackLevel>1) write (*,*) try_t, try_b
-        if(FeedbackLevel>1) write (*,*) '(If running a chain, have you put a constraint on tau?)'
         call GlobalError('Reionization did not converge to optical depth',error_reionization)
     end if
 
