@@ -14,11 +14,11 @@ tar xvfz COM_Likelihood_Data-baseline_R2.00.tar.gz
 ln -s $(pwd)/plc_2.0 ./data/clik
 rm -f COM_Likelihood_Data-baseline_R2.00.tar.gz
 
-make
+make cosmomc_debug
 
-mpirun -np 1 --allow-run-as-root ./cosmomc test.ini
+mpirun -np 1 --allow-run-as-root ./cosmomc_debug test.ini
 
-mpirun -np 1 --allow-run-as-root ./cosmomc test_planck.ini
+mpirun -np 1 --allow-run-as-root ./cosmomc_debug test_planck.ini
 rc=$?
 
 
