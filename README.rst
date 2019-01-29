@@ -8,6 +8,9 @@ CosmoChord
 
 .. image:: https://travis-ci.org/williamjameshandley/CosmoChord.svg?branch=master
     :target: https://travis-ci.org/williamjameshandley/CosmoChord
+.. image:: https://zenodo.org/badge/158467573.svg
+   :target: https://zenodo.org/badge/latestdoi/158467573
+
 
 Description and installation
 =============================
