@@ -3,11 +3,13 @@
 module nestwrap
 
     use settings
+    use MpiUtils, only: IsMainMPI
     use BaseParameters
     use GeneralSetup
 
     use priors_module
     use settings_module
+    use read_write_module, only: prior_info_file
     use random_module,          only: initialise_random
     use feedback_module
     use nested_sampling_module,   only: NestedSampling
@@ -75,7 +77,7 @@ module nestwrap
         nest_settings%feedback             =  Ini%Read_Int('feedback',1)     
 
         ! No maximum number of dead points
-        nest_settings%max_ndead            =  -1
+        nest_settings%max_ndead            =  Ini%Read_Int('max_ndead',-1)      
 
         ! Whether to resume from a previous run
         nest_settings%read_resume          = Ini%Read_Logical('checkpoint',.false.) 
@@ -190,6 +192,7 @@ module nestwrap
         end if
 
 
+        if (IsMainMPI()) open(1990,file=trim(prior_info_file(nest_settings)), action='write') 
 
 
         ! Allocate a temporary array of parameters
@@ -217,6 +220,7 @@ module nestwrap
                     )
                 ! Now set this to zero
                 BaseParams%GaussPriors%std(ix) = 0d0
+                if (IsMainMPI()) write(1990,'("gaussian ", A, " ", 4E24.15E3)') trim(BaseParams%NameMapping%name(ix)), BaseParams%PMin(ix) , BaseParams%PMax(ix) ,BaseParams%GaussPriors%mean(ix) , BaseParams%GaussPriors%std(ix)
             else if(any(ix==sorted_uniform_indices(:num_sorted_uniform))) then
                 ! If this is a uniform prior, then:
                 call add_parameter(nest_params,&
@@ -227,6 +231,7 @@ module nestwrap
                     sorted_uniform_type,&
                     [ sorted_uniform_min , sorted_uniform_max ] &
                     )
+                if (IsMainMPI()) write(1990,'("sorted ", A, " ", 2E24.15E3)') trim(BaseParams%NameMapping%name(ix)), BaseParams%PMin(ix) , BaseParams%PMax(ix)
             else
                 ! If this is a uniform prior, then:
                 call add_parameter(nest_params,&
@@ -237,10 +242,12 @@ module nestwrap
                     uniform_type,&
                     [ BaseParams%PMin(ix) , BaseParams%PMax(ix) ] &
                     )
+                if (IsMainMPI()) write(1990,'("uniform ", A, " ", 2E24.15E3)') trim(BaseParams%NameMapping%name(ix)), BaseParams%PMin(ix) , BaseParams%PMax(ix)
             end if
 
         end do
 
+        if (IsMainMPI()) close(1990) 
 
         ! Initialise the program
         call initialise_program(nest_settings,priors,nest_params,nest_derived_params)
