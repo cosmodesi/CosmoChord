@@ -219,8 +219,8 @@ module nestwrap
                     [ BaseParams%GaussPriors%mean(ix) , BaseParams%GaussPriors%std(ix) ] &
                     )
                 ! Now set this to zero
-                BaseParams%GaussPriors%std(ix) = 0d0
                 if (IsMainMPI()) write(1990,'("gaussian ", A, " ", 4E24.15E3)') trim(BaseParams%NameMapping%name(ix)), BaseParams%PMin(ix) , BaseParams%PMax(ix) ,BaseParams%GaussPriors%mean(ix) , BaseParams%GaussPriors%std(ix)
+                BaseParams%GaussPriors%std(ix) = 0d0
             else if(any(ix==sorted_uniform_indices(:num_sorted_uniform))) then
                 ! If this is a uniform prior, then:
                 call add_parameter(nest_params,&
