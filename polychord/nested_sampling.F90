@@ -491,7 +491,7 @@ module nested_sampling_module
 
             ! If the evidence in the live points is less than precision_criterion %
             ! of the total accumulated evidence, then stop.
-        else if( live_logZ(settings,RTI) < log(settings%precision_criterion) + RTI%logZ )  then
+        else if( settings%precision_criterion > 0 .and. live_logZ(settings,RTI) < log(settings%precision_criterion) + RTI%logZ )  then
             more_samples_needed = .false.
         end if
 
