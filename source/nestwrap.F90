@@ -101,6 +101,9 @@ module nestwrap
         nest_settings%nprior = Ini%Read_Int('nprior', -1) 
         nest_settings%nprior_repeat = Ini%Read_Int('nprior_repeat', -1) 
 
+        ! Whether to do a maximisation once finished
+        nest_settings%maximise =Ini%Read_Logical('nest_maximise', .false.)
+
         nest_settings%logzero = -logzero
 
         ! Read in the information from the ini file about priors
