@@ -42,8 +42,8 @@ module maximise_module
         type(mpi_bundle),intent(in) :: mpi_information
 
         real(dp) :: max_loglike, max_loglike0
-        integer :: imax(2)
-        integer :: cluster_id, i, j, epoch
+        integer :: imax
+        integer :: i, j, epoch, i_cluster
         real(dp), dimension(settings%nTotal) :: max_point, max_point0, max_point1, mean_point
         real(dp), dimension(settings%nDims,settings%nDims)   :: cholesky
         integer,   dimension(sum(num_repeats))   :: speeds ! The speed of each nhat
@@ -58,11 +58,15 @@ module maximise_module
         ! Get highest likelihood point
         if(is_root(mpi_information)) then
             write(stdout_unit,'("Maximising")') 
-            imax = maxloc(RTI%live(settings%l0,:,:))
-            cluster_id = imax(2)
-            max_point = RTI%live(:,imax(1),cluster_id)
-            max_loglike = max_point(settings%l0)
-            cholesky = RTI%cholesky(:,:,cluster_id)
+            max_loglike = settings%logzero
+            do i_cluster=1, RTI%ncluster
+                imax = maxloc(RTI%live(settings%l0,:,i_cluster), dim=1)
+                if (RTI%live(settings%l0,imax,i_cluster) > max_loglike) then
+                    max_loglike = RTI%live(settings%l0,imax,i_cluster)
+                    max_point = RTI%live(:,imax,i_cluster)
+                    cholesky = RTI%cholesky(:,:,i_cluster)
+                end if
+            end do
         end if
 
         do while(.true.)
@@ -88,8 +92,11 @@ module maximise_module
                 nhat = nhats(:,i)
                 w = sqrt(dot_product(nhat,nhat))
                 w = w * 3d0 
-                max_point = slice_sample(loglikelihood,prior,max_loglike,nhat,max_point,1d0,settings,nlike(speeds(i))) 
-                max_loglike = max(max_point(settings%l0),max_loglike)
+                max_point1 = slice_sample(loglikelihood,prior,max_loglike,nhat,max_point,1d0,settings,nlike(speeds(i))) 
+                if (max_point1(settings%l0) > max_loglike) then
+                    max_loglike = max_point1(settings%l0)
+                    max_point = max_point1
+                end if
             end do
 
 #ifdef MPI
@@ -111,8 +118,8 @@ module maximise_module
             if(is_root(mpi_information)) then
                 x0 = max_point0(settings%h0:settings%h1) 
                 x1 = max_point(settings%h0:settings%h1) 
-                dx = sqrt(dot_product(x0-x1,x0-x1))
-                if (dx < 1e-5 .or. max_loglike - max_loglike0 < 1e-4) then
+                dx = maxval(abs(x0-x1))
+                if (dx < 1e-5 .or. max_loglike - max_loglike0 < 1e-5) then
 #ifdef MPI
                 call mpi_synchronise(mpi_information)
                     do i=1,mpi_information%nprocs-1
