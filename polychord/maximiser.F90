@@ -124,11 +124,11 @@ module maximise_module
             !write(*,*) "clusters", cluster_id, imax
             if (RTI%live(settings%l0,imax,cluster_id) > max_loglike) then
                 max_point = RTI%live(:,imax,cluster_id)
+                if (posterior) max_point(settings%l0) = max_point(settings%l0) + dXdtheta(prior, max_point(settings%h0:settings%h1)) 
                 max_loglike = max_point(settings%l0)
                 cholesky = RTI%cholesky(:,:,cluster_id)
             end if
         end do
-        if (posterior) max_loglike = max_loglike + dXdtheta(prior, max_point(settings%h0:settings%h1)) 
         nlikes = 0
 
 
@@ -209,6 +209,7 @@ module maximise_module
             if (point_a(settings%l0) <= point(settings%l0)) exit
         end do
 
+        point_b = point
 
         point_c = point
         do while (.true.)
@@ -217,9 +218,6 @@ module maximise_module
             if (posterior .and. point_c(settings%l0)>settings%logzero) point_c(settings%l0) = point_c(settings%l0)  + dXdtheta(prior, point_c(settings%h0:settings%h1))
             if (point_c(settings%l0) <= point(settings%l0)) exit
         end do
-
-        point_b = point
-        if (posterior .and. point_b(settings%l0)>settings%logzero) point_b(settings%l0) = point_b(settings%l0)  + dXdtheta(prior, point_b(settings%h0:settings%h1))
 
         ! Now do golden section search
         do while (point_b(settings%l0)-min(point_a(settings%l0),point_c(settings%l0)) > dl ) 
@@ -263,12 +261,7 @@ module maximise_module
             end if
             !write(*,'(">>>>>>>>", 3F18.8)') point_a(settings%l0), point_b(settings%l0), point_c(settings%l0)
         end do
-
-        if (point_c(settings%l0) > point_d(settings%l0)) then
-            max_point = point_c
-        else
-            max_point = point_d
-        end if
+        max_point = point_b
 
     end function maximise_direction
 
