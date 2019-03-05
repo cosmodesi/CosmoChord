@@ -51,9 +51,11 @@ module maximise_module
         if (settings%posteriors) then
             mean_point(settings%p0:settings%d1) = mean(RTI, settings)
             mean_point(settings%l0) = loglikelihood(mean_point(settings%p0:settings%p1),mean_point(settings%d0:settings%d1)) 
-            call write_max_file(settings, max_point, max_posterior_point, dXdtheta(prior,max_posterior_point(settings%h0:settings%h1)),  mean_point)
+            call write_max_file(settings, max_point, max_posterior_point,&
+                                dXdtheta(prior,max_posterior_point(settings%h0:settings%h1)),  mean_point)
         else
-            call write_max_file(settings, max_point, max_posterior_point, dXdtheta(prior,max_posterior_point(settings%h0:settings%h1)))
+            call write_max_file(settings, max_point, max_posterior_point,&
+                                dXdtheta(prior,max_posterior_point(settings%h0:settings%h1)))
         end if
 
 
@@ -62,12 +64,12 @@ module maximise_module
 
     function do_maximisation(loglikelihood,prior,settings,RTI, posterior) result(max_point)
         use calculate_module, only: calculate_point
-        use utils_module, only: stdout_unit, fmt_len
+        use utils_module, only: stdout_unit, fmt_len, sort_doubles
         use settings_module,  only: program_settings
         use run_time_module,   only: run_time_info
         use read_write_module,   only: write_max_file, mean
         use chordal_module, only: generate_nhats, slice_sample
-        use bobyqa_module, only: minimize_with_bobyqa
+        use nelder_mead_module, only: nelder_mead
 #ifdef MPI
         use mpi_module, only: mpi_bundle,is_root, throw_point, catch_point, mpi_synchronise, throw_seed, catch_seed
 #else
@@ -95,48 +97,59 @@ module maximise_module
         ! The run time info (very important, see src/run_time_info.f90)
         type(run_time_info), intent(in) :: RTI
         logical, intent(in) :: posterior
+        real(dp), dimension(settings%nDims,settings%nDims+1) :: simplex
 
 
         real(dp) :: max_loglike
         integer :: imax, cluster_id
         real(dp), dimension(settings%nTotal) :: max_point
         integer :: nlike
-        real(dp),    dimension(settings%nDims)   :: xl, xu, x
+        real(dp), dimension(settings%nDims)   :: xl, xu, x
+        real(dp), dimension(settings%nDims+1) :: f
+        integer, dimension(settings%nlive) :: i
+        ! f needs to be the posterior, not the likelihood
 
-        ! Get highest likelihood point
+        ! Get highest likelihood points
         max_loglike = settings%logzero
         do cluster_id=1,RTI%ncluster
-            imax = maxloc(RTI%live(settings%l0,:RTI%nlive(cluster_id),cluster_id), dim=1)
-            !write(*,*) "clusters", cluster_id, imax
-            if (RTI%live(settings%l0,imax,cluster_id) > max_loglike) then
-                max_point = RTI%live(:,imax,cluster_id)
-                max_loglike = max_point(settings%l0)
-                if (posterior) max_loglike = max_loglike + dXdtheta(prior, max_point(settings%h0:settings%h1)) 
+            if (RTI%nlive(cluster_id) >= settings%nDims +1) then
+                i(:RTI%nlive(cluster_id)) = sort_doubles(RTI%live(settings%l0,:RTI%nlive(cluster_id), cluster_id))
+                if (RTI%live(settings%l0,i(RTI%nlive(cluster_id)),cluster_id) > max_loglike) then
+                    max_loglike = RTI%live(settings%l0,i(RTI%nlive(cluster_id)),cluster_id)
+                    simplex = RTI%live(settings%h0:settings%h1,i(RTI%nlive(cluster_id)-settings%nDims-1:),cluster_id)
+                    f = RTI%live(settings%l0,i(RTI%nlive(cluster_id)-settings%nDims-1:),cluster_id)
+                end if
             end if
         end do
+        if (max_loglike > settings%logzero) then
+            x = nelder_mead(func, simplex, f, 1d-6)
+            max_point(settings%h0:settings%h1) = x
+            write(*,*) 'calculating'
+            call calculate_point(loglikelihood,prior,max_point,settings,nlike) 
+        else
+            write(*,*) "Could not construct simplex"
+        end if
+        write(*,*) 'done'
 
-        xl = 0
-        xu = 1
-        x = max_point(settings%h0:settings%h1)
-        call minimize_with_bobyqa(settings%ndims,x,xl,xu,settings%ndims+2, 1d-3,1d-10,3, 10000, CALFUN ) 
-        max_point(settings%h0:settings%h1) = x
-        call calculate_point(loglikelihood,prior,max_point,settings,nlike) 
 
         contains
-         subroutine CALFUN(n,x,f)
+         function func(x)
             use calculate_module, only: calculate_point
-            integer, intent(in) :: n                 
-            real(8), intent(in), dimension(n) :: x
-            real(8), intent(out) :: f 
+            implicit none
+            double precision, intent(in), dimension(:) :: x
+            double precision :: func
             real(dp), dimension(settings%nTotal) :: point
             integer nlike
 
             point(settings%h0:settings%h1) = x
             call calculate_point(loglikelihood,prior,point,settings,nlike) 
-            f  = max_loglike- point(settings%l0)
-            if (posterior .and. f<-settings%logzero) f = f - dXdtheta(prior, point(settings%h0:settings%h1))
+            func  = point(settings%l0)
+            if (posterior .and. func>settings%logzero) then
+                write(*,*) 'computing posterior'
+                func = func + dXdtheta(prior, point(settings%h0:settings%h1))
+            end if
 
-         end subroutine
+         end function
 
 
     end function do_maximisation
