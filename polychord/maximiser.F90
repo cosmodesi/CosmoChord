@@ -97,15 +97,16 @@ module maximise_module
         ! The run time info (very important, see src/run_time_info.f90)
         type(run_time_info), intent(in) :: RTI
         logical, intent(in) :: posterior
-        real(dp), dimension(settings%nDims,settings%nDims+1) :: simplex
 
 
         real(dp) :: max_loglike
         integer :: imax, cluster_id
         real(dp), dimension(settings%nTotal) :: max_point
-        integer :: nlike
+        integer :: nlike, j
         real(dp), dimension(settings%nDims)   :: xl, xu, x
+        real(dp), dimension(settings%nDims,settings%nDims+1) :: simplex
         real(dp), dimension(settings%nDims+1) :: f
+        real(dp), dimension(settings%nlive) :: l
         integer, dimension(settings%nlive) :: i
         ! f needs to be the posterior, not the likelihood
 
@@ -113,23 +114,28 @@ module maximise_module
         max_loglike = settings%logzero
         do cluster_id=1,RTI%ncluster
             if (RTI%nlive(cluster_id) >= settings%nDims +1) then
-                i(:RTI%nlive(cluster_id)) = sort_doubles(RTI%live(settings%l0,:RTI%nlive(cluster_id), cluster_id))
-                if (RTI%live(settings%l0,i(RTI%nlive(cluster_id)),cluster_id) > max_loglike) then
-                    max_loglike = RTI%live(settings%l0,i(RTI%nlive(cluster_id)),cluster_id)
-                    simplex = RTI%live(settings%h0:settings%h1,i(RTI%nlive(cluster_id)-settings%nDims-1:),cluster_id)
-                    f = RTI%live(settings%l0,i(RTI%nlive(cluster_id)-settings%nDims-1:),cluster_id)
+                l = RTI%live(settings%l0,:RTI%nlive(cluster_id), cluster_id)
+                if (posterior) then
+                    do j=1,RTI%nlive(cluster_id)
+                        l(j) = l(j) + dXdtheta(prior, RTI%live(settings%h0:settings%h1,j, cluster_id))
+                    end do
+                end if
+                i(:RTI%nlive(cluster_id)) = sort_doubles(l(:RTI%nlive(cluster_id)))
+
+                if (l(i(RTI%nlive(cluster_id))) > max_loglike) then
+                    max_loglike = l(i(RTI%nlive(cluster_id)))
+                    simplex = RTI%live(settings%h0:settings%h1,i(RTI%nlive(cluster_id)-settings%nDims:RTI%nlive(cluster_id)),cluster_id)
+                    f = l(i(RTI%nlive(cluster_id)-settings%nDims:RTI%nlive(cluster_id)))
                 end if
             end if
         end do
         if (max_loglike > settings%logzero) then
             x = nelder_mead(func, simplex, f, 1d-6)
             max_point(settings%h0:settings%h1) = x
-            write(*,*) 'calculating'
             call calculate_point(loglikelihood,prior,max_point,settings,nlike) 
         else
             write(*,*) "Could not construct simplex"
         end if
-        write(*,*) 'done'
 
 
         contains
@@ -145,7 +151,6 @@ module maximise_module
             call calculate_point(loglikelihood,prior,point,settings,nlike) 
             func  = point(settings%l0)
             if (posterior .and. func>settings%logzero) then
-                write(*,*) 'computing posterior'
                 func = func + dXdtheta(prior, point(settings%h0:settings%h1))
             end if
 
