@@ -130,7 +130,7 @@ module maximise_module
             end if
         end do
         if (max_loglike > settings%logzero) then
-            x = nelder_mead(func, simplex, f, 1d-6)
+            x = nelder_mead(func, simplex, f, 1d-5)
             max_point(settings%h0:settings%h1) = x
             call calculate_point(loglikelihood,prior,max_point,settings,nlike) 
         else

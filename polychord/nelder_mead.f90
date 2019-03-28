@@ -24,13 +24,19 @@ module nelder_mead_module
             integer :: n, j
             integer, dimension(size(f)) :: i
             double precision, dimension(size(f)-1) :: xo, xr, xe, xc, xmax
+            double precision, dimension(size(f)-1,size(f)-1) :: V
             double precision :: fr, fe, fc
+            double precision :: det0, det1
 
+            det0 = -1
             n = size(f)-1
             do while (.true.)
                 ! 1) Sort
                 i = sort_doubles(f)
-                if (f(i(n+1)) - f(i(1)) < dl) exit
+                if (det0<0) det0 = abs(det(x(:,i(:n))-spread(x(:,i(n+1)),dim=2,ncopies=n)))
+                det1 = abs(det(x(:,i(:n))-spread(x(:,i(n+1)),dim=2,ncopies=n))) 
+                write(*,*) det0, det1
+                if (f(i(n+1)) - f(i(1)) < dl .or. (det1/det0)**(1./n) < dl) exit
 
                 ! 2) Centroid
                 xo = sum(x(:,i(2:)),dim=2)/n
@@ -158,5 +164,50 @@ module nelder_mead_module
 
     end subroutine Partition
 
+    function det(matrix)
+        implicit none
+        double precision, dimension(:,:) :: matrix
+        double precision det
+        double precision :: m, temp
+        integer :: n, i, j, k, l
+        logical :: detexists = .true.
+        n = size(matrix,1)
+        l = 1
+        !convert to upper triangular form
+        do k = 1, n-1
+            if (matrix(k,k) == 0) then
+                detexists = .false.
+                do i = k+1, n
+                    if (matrix(i,k) /= 0) then
+                        do j = 1, n
+                            temp = matrix(i,j)
+                            matrix(i,j)= matrix(k,j)
+                            matrix(k,j) = temp
+                        end do
+                        detexists = .true.
+                        l=-l
+                        exit
+                    endif
+                end do
+                if (detexists .eqv. .false.) then
+                    det = 0
+                    return
+                end if
+            endif
+            do j = k+1, n
+                m = matrix(j,k)/matrix(k,k)
+                do i = k+1, n
+                    matrix(j,i) = matrix(j,i) - m*matrix(k,i)
+                end do
+            end do
+        end do
+        
+        !calculate determinant by finding product of diagonal elements
+        det = l
+        do i = 1, n
+            det = det * matrix(i,i)
+        end do
+        
+    end function det
 
 end module nelder_mead_module
