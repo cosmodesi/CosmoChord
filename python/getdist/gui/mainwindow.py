@@ -12,42 +12,62 @@ import signal
 from io import BytesIO
 import six
 from collections import OrderedDict
+from getdist.gui.qt_import import pyside_version
 
-matplotlib.use('Qt4Agg')
-
-try:
-    from packaging.version import Version
-
-    if Version(matplotlib.__version__) < Version("2.2.0"):
-        matplotlib.rcParams['backend.qt4'] = 'PySide'
-except ImportError:
-    pass
-
-from getdist.gui import SyntaxHighlight
+import getdist
 from getdist import plots, IniFile
 from getdist.mcsamples import GetChainRootFiles, SettingError, ParamError
+from getdist.gui.SyntaxHighlight import PythonHighlighter
 
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+
+if pyside_version == 2:
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+else:
+    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
 
 try:
-    import PySide
-    from PySide.QtCore import Qt, SIGNAL, QSize, QSettings, QPoint, QCoreApplication
-    from PySide.QtGui import *
+    if pyside_version == 2:
+        import PySide2 as PySide
+        from PySide2.QtGui import QIcon, QKeySequence, QFont, QTextOption, QPixmap, QImage
+        from PySide2.QtCore import Qt, SIGNAL, QSize, QSettings, QPoint, QCoreApplication
+        from PySide2.QtWidgets import QListWidget, QMainWindow, QDialog, QApplication, QAbstractItemView, QAction, \
+            QTabWidget, QWidget, QComboBox, QPushButton, QShortcut, QCheckBox, QRadioButton, QGridLayout, QVBoxLayout, \
+            QSplitter, QHBoxLayout, QToolBar, QPlainTextEdit, QScrollArea, QFileDialog, QMessageBox, QTableWidgetItem, \
+            QLabel, QTableWidget, QListWidgetItem, QTextEdit
 
-    os.environ['QT_API'] = 'pyside'
+        os.environ['QT_API'] = 'pyside2'
+    else:
+        import PySide
+        from PySide.QtCore import Qt, SIGNAL, QSize, QSettings, QPoint, QCoreApplication
+        from PySide.QtGui import QListWidget, QMainWindow, QDialog, QApplication, QAbstractItemView, QAction, \
+            QTabWidget, QWidget, QComboBox, QPushButton, QShortcut, QCheckBox, QRadioButton, QGridLayout, QVBoxLayout, \
+            QSplitter, QHBoxLayout, QToolBar, QPlainTextEdit, QScrollArea, QFileDialog, QMessageBox, QTableWidgetItem, \
+            QLabel, QTableWidget, QListWidgetItem, QTextEdit, QIcon, QKeySequence, QFont, QTextOption, QImage, QPixmap
+
+        os.environ['QT_API'] = 'pyside'
+
     try:
-        import getdist.gui.Resources_pyside
+        if pyside_version == 2:
+            import getdist.gui.Resources_pyside2
+        else:
+            import getdist.gui.Resources_pyside
     except ImportError:
         print("Missing Resources_pyside.py: Run script update_resources.sh")
 except ImportError:
-    print("Can't import PySide modules, install PySide")
-    if 'conda' in sys.version:
-        print("To install use 'conda install pyside' or 'conda install -c conda-forge pyside'")
+    if six.PY3:
+        print(
+            "Can't import PySide modules, for python 3 you need to install Pyside using 'conda install -c conda-forge pyside2'")
     else:
-        print("Use 'pip install PySide', or to avoid compile errors install pre-build package using apt get install.")
-        print("Alternatively switch to using Anaconda python distribution and get it with that.")
+        print("Can't import PySide modules, install PySide")
+        if 'conda' in sys.version:
+            print("To install use 'conda install pyside' or 'conda install -c conda-forge pyside'")
+        else:
+            print(
+                "Use 'pip install PySide', or to avoid compile errors install pre-build package using apt get install.")
+            print("Alternatively switch to using Anaconda python distribution and get it with that.")
     sys.exit()
 
 from paramgrid import batchjob, gridconfig
@@ -71,8 +91,10 @@ class ParamListWidget(QListWidget):
         self.setDropIndicatorShown(True)
         self.setDragDropMode(QAbstractItemView.InternalMove)
         self.owner = owner
-        list_model = self.model()
-        list_model.layoutChanged.connect(owner._updateParameters)
+
+    def dropEvent(self, event):
+        super(ParamListWidget, self).dropEvent(event)
+        self.owner._updateParameters()
 
 
 class MainWindow(QMainWindow):
@@ -282,9 +304,12 @@ class MainWindow(QMainWindow):
                      SIGNAL("activated(const QString&)"),
                      self.openDirectory)
 
-        self.pushButtonSelect = QPushButton(QIcon(":/images/file_add.png"),
-                                            "", self.selectWidget)
-        self.pushButtonSelect.setToolTip("Choose root directory")
+        if pyside_version == 1:
+            self.pushButtonSelect = QPushButton(QIcon(":/images/file_add.png"), "", self.selectWidget)
+        else:
+            self.pushButtonSelect = QPushButton(u"+", self.selectWidget)
+
+        self.pushButtonSelect.setToolTip("Open chain file root directory")
         self.connect(self.pushButtonSelect, SIGNAL("clicked()"),
                      self.selectRootDirName)
         shortcut = QShortcut(QKeySequence(self.tr("Ctrl+O")), self)
@@ -296,8 +321,11 @@ class MainWindow(QMainWindow):
                      SIGNAL("itemChanged(QListWidgetItem *)"),
                      self.updateListRoots)
 
-        self.pushButtonRemove = QPushButton(QIcon(":/images/file_remove.png"),
-                                            "", self.selectWidget)
+        if pyside_version == 1:
+            self.pushButtonRemove = QPushButton(QIcon(":/images/file_remove.png"), "", self.selectWidget)
+        else:
+            self.pushButtonRemove = QPushButton(u"\u00d7", self.selectWidget)
+
         self.pushButtonRemove.setToolTip("Remove a chain root")
         self.connect(self.pushButtonRemove, SIGNAL("clicked()"),
                      self.removeRoot)
@@ -444,7 +472,7 @@ class MainWindow(QMainWindow):
         textfont.setStyleHint(QFont.TypeWriter)
         self.textWidget.setWordWrapMode(QTextOption.NoWrap)
         self.textWidget.setFont(textfont)
-        SyntaxHighlight.PythonHighlighter(self.textWidget.document())
+        PythonHighlighter(self.textWidget.document())
 
         self.pushButtonPlot2 = QPushButton("Make plot", self.editWidget)
         self.connect(self.pushButtonPlot2, SIGNAL("clicked()"), self.plotData2)
@@ -696,7 +724,7 @@ class MainWindow(QMainWindow):
                 'legend_frame', 'figure_legend_frame', 'figure_legend_ncol', 'legend_rect_border',
                 'legend_frac_subplot_margin', 'legend_frac_subplot_line', 'num_plot_contours',
                 'solid_contour_palefactor', 'alpha_filled_add', 'alpha_factor_contour_lines', 'axis_marker_color',
-                'axis_marker_ls', 'axis_marker_lw', 'auto_ticks', 'thin_long_subplot_ticks']
+                'axis_marker_ls', 'axis_marker_lw', 'auto_ticks', 'thin_long_subplot_ticks', 'title_limit']
         pars.sort()
         ini = IniFile()
         for par in pars:
@@ -1492,7 +1520,7 @@ class MainWindow(QMainWindow):
 
             globaldic = {}
             localdic = {}
-            exec (script_exec, globaldic, localdic)
+            exec(script_exec, globaldic, localdic)
 
             for v in six.itervalues(localdic):
                 if isinstance(v, plots.GetDistPlotter):

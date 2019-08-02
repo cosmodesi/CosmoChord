@@ -14,6 +14,7 @@ _prior = "prior"
 _theory = "theory"
 _params = "params"
 _likelihood = "likelihood"
+_sampler = "sampler"
 _p_label = "latex"
 _p_dist = "dist"
 _p_value = "value"
@@ -25,6 +26,7 @@ _prior_1d_name = "0"
 _chi2 = "chi2"
 _weight = "weight"
 _minuslogpost = "minuslogpost"
+_post = "post"
 
 
 # Exceptions
@@ -112,14 +114,33 @@ def get_info_params(info):
             continue
         info_params_full[p] = info_params[p]
     # Add prior and likelihoods
+    priors = [_prior_1d_name] + list(info.get(_prior, []))
+    likes = list(info.get(_likelihood))
+    # Account for post
+    remove = info.get(_post, {}).get("remove", {})
+    for param in remove.get(_params, []) or []:
+        info_params_full.pop(param, None)
+    for like in remove.get(_likelihood, []) or []:
+        likes.remove(like)
+    for prior in remove.get(_prior, []) or []:
+        priors.remove(prior)
+    add = info.get(_post, {}).get("add", {})
+    # Adding derived params and updating 1d priors
+    for param, pinfo in add.get(_params, {}).items():
+        pinfo_old = info_params_full.get(param, {})
+        pinfo_old.update(pinfo)
+        info_params_full[param] = pinfo_old
+    likes += list(add.get(_likelihood, []))
+    priors += list(add.get(_prior, []))
+    # Add the prior and the likelihood as derived parameters
     info_params_full[_minuslogprior] = {_p_label: r"-\log\pi"}
-    for prior in [_prior_1d_name] + list(info.get(_prior, [])):
+    for prior in priors:
         info_params_full[_minuslogprior + _separator + prior] = {
-            _p_label: r"-\log\pi_\mathrm{" + prior.replace("_", "\ ") + r"}"}
+            _p_label: r"-\log\pi_\mathrm{" + prior.replace("_", r"\ ") + r"}"}
     info_params_full[_chi2] = {_p_label: r"\chi^2"}
-    for lik in info.get(_likelihood):
-        info_params_full[_chi2 + _separator + lik] = {
-            _p_label: r"\chi^2_\mathrm{" + lik.replace("_", "\ ") + r"}"}
+    for like in likes:
+        info_params_full[_chi2 + _separator + like] = {
+            _p_label: r"\chi^2_\mathrm{" + like.replace("_", r"\ ") + r"}"}
     return info_params_full
 
 
@@ -182,3 +203,11 @@ def expand_info_param(info_param):
     if isinstance(value, string_types) or callable(value):
         info_param[_p_derived] = info_param.get(_p_derived, True)
     return info_param
+
+
+def get_sampler_type(filename_or_info):
+    if isinstance(filename_or_info, string_types):
+        filename_or_info = yaml_load_file(filename_or_info)
+    default_sampler_for_chain_type = "mcmc"
+    sampler = list(filename_or_info.get(_sampler, [default_sampler_for_chain_type]))[0]
+    return {"mcmc": "mcmc", "polychord": "nested"}[sampler]

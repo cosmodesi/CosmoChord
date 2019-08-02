@@ -1,0 +1,4 @@
+[submodule "camb"]
+	path = camb
+	url = https://github.com/williamjameshandley/camb
+	branch = cosmochord

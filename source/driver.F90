@@ -254,7 +254,7 @@
     end if
 
     if (estimate_propose_matrix .and. Setup%action == action_MCMC .or. Setup%action==action_Hessian) then
-        call MpiStop('hessian evaluation disabled for now')
+        call MpiStop('hessian evaluation disabled for now (it never worked very well anyway)')
         !        ! slb5aug04 with AL updates
         !        if (MpiRank==0) then
         !            EstParams = Params
