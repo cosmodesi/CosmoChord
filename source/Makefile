@@ -151,9 +151,8 @@ endif
 endif
 
 #PolyChord Library
-LIB_NS =../polychord
-LINKFLAGS += -L$(LIB_NS) -lchord
-F90FLAGS += $(IFLAG)$(LIB_NS)
+LINKFLAGS += -L../polychord/lib -lchord
+F90FLAGS += $(IFLAG)../polychord/src/polychord/
 
 DISTFILES = $(OUTPUT_DIR)/ObjectParamNames.o  \
     $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/samples.o $(OUTPUT_DIR)/IO.o $(OUTPUT_DIR)/GetDist.o
@@ -284,7 +283,7 @@ F90FLAGS += $(IFLAG)$(cfitsio)/include $(IFLAG)$(WMAP) -DWMAP
 LINKFLAGS +=  -L$(cfitsio)/lib -L$(WMAP) -lcfitsio -lwmap9
 endif
 
-F90FLAGS += $(MODOUT) $(IFLAG)$(OUTPUT_DIR)/  $(IFLAG)$(LIB_NS) 
+F90FLAGS += $(MODOUT) $(IFLAG)$(OUTPUT_DIR)/
 
 export FFLAGS
 export F90C
@@ -323,7 +322,7 @@ cleancosmomc:
 	rm -rf Debug*
 
 cleanpolychord:
-	cd $(LIB_NS); $(MAKE) clean
+	cd ../polychord; $(MAKE) clean
 
 getdist: directories $(DISTFILES)
 	$(F90C) -o ../getdist $(DISTFILES) $(LAPACKL) $(GETDISTFLAGS)
@@ -334,7 +333,7 @@ camb:
     FORUTILSPATH=$(FORUTILSPATH)
 
 polychord:
-	cd $(LIB_NS); $(MAKE) all BUILD=$(BUILD)
+	cd ../polychord; $(MAKE) libchord.a BUILD=$(BUILD)
 
 $(highL)/libhigh.a:
 	cd $(highL); make libhigh.a;

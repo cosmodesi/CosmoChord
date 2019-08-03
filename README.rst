@@ -22,7 +22,7 @@ Installation procedure:
 
 .. bash::
    
-   git clone https://github.com/williamjameshandley/CosmoChord
+   git clone --recursive https://github.com/williamjameshandley/CosmoChord
    cd CosmoChord
    make
    export OMP_NUM_THREADS=1
@@ -40,14 +40,14 @@ You can see the key changes by running:
    git fetch upstream
    git diff --stat upstream/master
    git diff  upstream/master source 
-   git diff  upstream/master camb 
 
 
 The changes to CosmoMC are minor:
 
 - Nested sampling heavily samples the tails of the posterior. This means that
   there need to be more corrections for these regions that are typically
-  unexplored by the default metropolis hastings tool.
+  unexplored by the default metropolis hastings tool. This is now implemented
+  by separate CAMB git submodule
 - You should **not** use openmp parallelisation, as this in inefficient when
   using PolyChord. Instead, you should use pure MPI parallelisation, and you
   may use as many cores as you have live points.

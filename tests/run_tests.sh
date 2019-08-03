@@ -13,12 +13,12 @@ ln -s $(pwd)/baseline/plc_3.0 ./data/clik_14.0
 rm -f *baseline*.tar.gz
 
 
-make cosmomc_debug
+make
 
 mpirun -np 1 --allow-run-as-root ./cosmomc test.ini
 rc=$?
 
-mpirun -np 1 --allow-run-as-root ./cosmomc_debug test_planck.ini
+mpirun -np 1 --allow-run-as-root ./cosmomc test_planck.ini
 rc=$?
 
 
