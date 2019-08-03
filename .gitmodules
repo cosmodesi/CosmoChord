@@ -1,4 +1,9 @@
 [submodule "camb"]
 	path = camb
-	url = https://github.com/williamjameshandley/camb
+	url = https://github.com/williamjameshandley/CAMB
 	branch = cosmochord
+
+[submodule "polychord"]
+	path = polychord
+	url = https://github.com/PolyChord/PolyChordLite
+	branch = master
