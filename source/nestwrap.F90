@@ -172,7 +172,7 @@ module nestwrap
 
 
         ! Derived parameters
-        call Setup%Config%Parameterization%CalcDerivedParams(CurParams%P,CurParams%Theory, derived) 
+        call Setup%Config%Parameterization%CalcDerivedParams(CurParams,CurParams%Theory, derived) 
         call DataLikelihoods%addLikelihoodDerivedParams(CurParams%P, CurParams%Theory, derived, CurParams%Likelihoods, -lnew)
 
         if (allocated(derived)) then
@@ -323,7 +323,7 @@ module nestwrap
             CurParams = TrialParams
 
             ! Derived parameters
-            call Setup%Config%Parameterization%CalcDerivedParams(TrialParams%P,TrialParams%Theory, derived) 
+            call Setup%Config%Parameterization%CalcDerivedParams(TrialParams,TrialParams%Theory, derived) 
             call DataLikelihoods%addLikelihoodDerivedParams(TrialParams%P, TrialParams%Theory, derived, TrialParams%Likelihoods, -loglikelihood)
 
             if (size_derived>0) phi(:size_derived) = derived
