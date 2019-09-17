@@ -24,6 +24,7 @@ ntrun         n_{t,{\rm run}}
 Aphiphi       A^{\phi\phi}_L #scaling of lensing potential power (lensed power spectra unchanged)
 omegabh2*     \Omega_b h^2	#physical baryon density
 omegach2*     \Omega_c h^2	#physical CDM matter density
+theta*        100\theta_{MC} #100 times the ratio of the angular diameter distance to the LSS sound horizon (approx)
 omegal*       \Omega_\Lambda
 omegamh2*     \Omega_m h^2 #includes massive neutrinos
 omeganuh2*    \Omega_\nu h^2 
