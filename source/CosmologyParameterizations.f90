@@ -455,6 +455,7 @@
     class is (TCosmologyCalculator)
         select type (CMB)
         class is (CMBParams)
+            CMB%reserved=0
             omegam = Params%P(1)
             CMB%omb= Params%P(2)
             CMB%H0 = Params%P(3)
@@ -488,6 +489,11 @@
             CMB%omc= omegam - CMB%omb - CMB%omnu
             CMB%omch2 = CMB%omc*h2
 
+            CMB%omdmh2 = CMB%omch2+ CMB%omnuh2
+            CMB%omdm = CMB%omdmh2/h2
+            CMB%omv = 1- CMB%omk - CMB%omb - CMB%omdm
+            CMB%nufrac=CMB%omnuh2/CMB%omdmh2
+
             if (CosmoSettings%bbn_consistency) then
                 CMB%YHe = BBN_YHe%Value(CMB%ombh2,CMB%nnu - standard_neutrino_neff,error)
             else
@@ -503,12 +509,6 @@
             CMB%InitPower(1:num_initpower) = Params%P(index_initpower:index_initpower+num_initpower-1)
             !CMB%InitPower(As_index) = exp(CMB%InitPower(As_index))
             CMB%InitPower(As_index) = CMB%InitPower(As_index) *10 !input is 10^9 As, cl_norm = 1e-10
-
-            CMB%omdmh2 = CMB%omch2+ CMB%omnuh2
-            CMB%omdm = CMB%omdmh2/h2
-            CMB%omv = 1- CMB%omk - CMB%omb - CMB%omdm
-            CMB%nufrac=CMB%omnuh2/CMB%omdmh2
-            CMB%reserved=0
 
             temp = CosmoCalc%CMBToTheta(CMB) 
             if (CMB%tau==0._mcp) then
@@ -540,12 +540,14 @@
         derived(1) = CMB%ombh2
         derived(2) = CMB%omch2
         derived(3) = CMB%omv
-        derived(4) = CMB%omnuh2
-        derived(5) = log(CMB%InitPower(As_index))
-        derived(6) = Theory%Sigma_8
-        derived(7) = Theory%Sigma_8*((CMB%omdm+CMB%omb)/0.3)**0.5_mcp
-        derived(8) = Theory%Sigma_8*((CMB%omdm+CMB%omb))**0.5_mcp
-        derived(9) = Theory%Sigma_8*((CMB%omdm+CMB%omb))**0.25_mcp
+        derived(4) = CMB%omdmh2 + CMB%ombh2
+        derived(5) = CMB%omnuh2
+        derived(6) = (CMB%omdmh2 + CMB%ombh2)*CMB%h
+        derived(7) = log(CMB%InitPower(As_index))
+        derived(8) = Theory%Sigma_8
+        derived(9) = Theory%Sigma_8*((CMB%omdm+CMB%omb)/0.3)**0.5_mcp
+        derived(10) = Theory%Sigma_8*((CMB%omdm+CMB%omb))**0.5_mcp
+        derived(11) = Theory%Sigma_8*((CMB%omdm+CMB%omb))**0.25_mcp
     end select
 
     end subroutine AP_CalcDerivedParams

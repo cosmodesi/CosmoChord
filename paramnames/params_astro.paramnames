@@ -25,7 +25,9 @@ Aphiphi       A^{\phi\phi}_L #scaling of lensing potential power (lensed power s
 omegabh2*     \Omega_b h^2	#physical baryon density
 omegach2*     \Omega_c h^2	#physical CDM matter density
 omegal*       \Omega_\Lambda
+omegamh2*     \Omega_m h^2 #includes massive neutrinos
 omeganuh2*    \Omega_\nu h^2 
+omegamh3*     \Omega_m h^3 #well determined orthogonal to degeneracy for 6-param model
 logA*         {\rm{ln}}(10^{10} A_s)
 sigma8*       \sigma_8
 S8*           S_8 #\sigma_8(\Omega_m/0.3)^{0.5}
