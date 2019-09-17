@@ -460,11 +460,16 @@
             CMB%H0 = Params%P(3)
             CMB%tau = Params%P(4)
             CMB%omk = Params%P(5)
-            CMB%nnu = Params%P(10) !3.046
+            CMB%w =    Params%P(8)
+            CMB%wa =   Params%P(9)
+            CMB%nnu =  Params%P(10)
             !Params%P(6) is now mnu, where mnu is physical standard neutrino mass and we assume standard heating
             CMB%sum_mnu_standard = Params%P(6)
-            CMB%omnuh2=Params%P(6)/neutrino_mass_fac*(standard_neutrino_neff/3)**0.75_mcp
-
+            if (CMB%nnu > standard_neutrino_neff .or. CosmoSettings%neutrino_hierarchy /= neutrino_hierarchy_degenerate) then
+                CMB%omnuh2=Params%P(6)/neutrino_mass_fac*(standard_neutrino_neff/3)**0.75_mcp
+            else
+                CMB%omnuh2=Params%P(6)/neutrino_mass_fac*(CMB%nnu/3)**0.75_mcp
+            end if
             !Params(7) is mass_sterile*Neff_sterile
             CMB%omnuh2_sterile = Params%P(7)/neutrino_mass_fac
             !we are using interpretation where there are degeneracy_factor neutrinos, each exactly thermal
@@ -473,6 +478,7 @@
                 error=-1
                 call MpiStop('sterile neutrino mass required Neff>3.046')
             end if
+            CMB%omnuh2 = CMB%omnuh2 + CMB%omnuh2_sterile
 
             CMB%h=CMB%H0/100
             h2 = CMB%h**2
@@ -482,9 +488,6 @@
             CMB%omc= omegam - CMB%omb - CMB%omnu
             CMB%omch2 = CMB%omc*h2
 
-            CMB%w =    Params%P(8)
-            CMB%wa =   Params%P(9)
-            CMB%nnu =  Params%P(10)
             if (CosmoSettings%bbn_consistency) then
                 CMB%YHe = BBN_YHe%Value(CMB%ombh2,CMB%nnu - standard_neutrino_neff,error)
             else
