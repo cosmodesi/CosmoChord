@@ -426,7 +426,7 @@
     end if
 
     call this%Initialize(Ini,Names, 'paramnames/params_astro.paramnames', Config)
-    call this%SetTheoryParameterNumbers(11,last_power_index)
+    call this%SetTheoryParameterNumbers(12,last_power_index)
 
     end subroutine AP_Init
 
@@ -494,6 +494,8 @@
                 CMB%YHe = Params%P(11)
             end if
 
+            CMB%iso_cdm_correlated =  Params%P(12)
+
             CMB%InitPower(1:num_initpower) = Params%P(index_initpower:index_initpower+num_initpower-1)
             !CMB%InitPower(As_index) = exp(CMB%InitPower(As_index))
             CMB%InitPower(As_index) = CMB%InitPower(As_index) *10 !input is 10^9 As, cl_norm = 1e-10
@@ -506,7 +508,6 @@
             CMB%reserved=0
             CMB%fdm=0
             CMB%ALensf = 1
-            CMB%iso_cdm_correlated=0
             CMB%Alens=1
 
             temp = CosmoCalc%CMBToTheta(CMB) 
