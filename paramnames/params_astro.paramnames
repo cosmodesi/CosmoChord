@@ -1,8 +1,9 @@
 omegam        \Omega_m
 omegab        \Omega_b
 H0            H_0
+tau           \tau
 omegak        \Omega_K
-mnu           \Sigma m_\nu		
+mnu           \Sigma m_\nu    #sum of physical masses of standard neutrinos
 w             w			#equation of state parameter for scalar field dark energy today
 wa            w_a       #w_a variation
 nnu           N_{eff}   #effective number of neutrinos (only clearly defined for massless)

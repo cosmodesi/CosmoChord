@@ -426,7 +426,7 @@
     end if
 
     call this%Initialize(Ini,Names, 'paramnames/params_astro.paramnames', Config)
-    call this%SetTheoryParameterNumbers(9,last_power_index)
+    call this%SetTheoryParameterNumbers(10,last_power_index)
 
     end subroutine AP_Init
 
@@ -448,52 +448,63 @@
     class(AstroParameterization) :: this
     class(TCalculationAtParamPoint) :: Params
     class(TTheoryParams), target :: CMB
-    real(mcp) omegam, h2
+    real(mcp) omegam, h2, temp
     integer error
 
-    select type (CMB)
-    class is (CMBParams)
-        omegam = Params%P(1)
-        CMB%omb= Params%P(2)
-        CMB%H0 = Params%P(3)
-        CMB%omk = Params%P(4)
-        CMB%sum_mnu_standard = Params%P(5)
-        CMB%omnuh2=Params%P(5)/neutrino_mass_fac*(standard_neutrino_neff/3)**0.75_mcp
+    select type(CosmoCalc=>this%Config%Calculator)
+    class is (TCosmologyCalculator)
+        select type (CMB)
+        class is (CMBParams)
+            omegam = Params%P(1)
+            CMB%omb= Params%P(2)
+            CMB%H0 = Params%P(3)
+            CMB%tau = Params%P(4)
+            CMB%omk = Params%P(5)
+            CMB%sum_mnu_standard = Params%P(6)
+            CMB%omnuh2=Params%P(6)/neutrino_mass_fac*(standard_neutrino_neff/3)**0.75_mcp
 
-        CMB%h=CMB%H0/100
-        h2 = CMB%h**2
+            CMB%h=CMB%H0/100
+            h2 = CMB%h**2
 
-        CMB%omnu = CMB%omnuh2/h2
-        CMB%ombh2 = CMB%omb*h2
-        CMB%omc= omegam - CMB%omb - CMB%omnu
-        CMB%omch2 = CMB%omc*h2
+            CMB%omnu = CMB%omnuh2/h2
+            CMB%ombh2 = CMB%omb*h2
+            CMB%omc= omegam - CMB%omb - CMB%omnu
+            CMB%omch2 = CMB%omc*h2
 
-        CMB%w =    Params%P(6)
-        CMB%wa =   Params%P(7)
-        CMB%nnu =  Params%P(8)
-        if (CosmoSettings%bbn_consistency) then
-            CMB%YHe = BBN_YHe%Value(CMB%ombh2,CMB%nnu - standard_neutrino_neff,error)
-        else
-            CMB%YHe = Params%P(9)
-        end if
+            CMB%w =    Params%P(7)
+            CMB%wa =   Params%P(8)
+            CMB%nnu =  Params%P(9)
+            if (CosmoSettings%bbn_consistency) then
+                CMB%YHe = BBN_YHe%Value(CMB%ombh2,CMB%nnu - standard_neutrino_neff,error)
+            else
+                CMB%YHe = Params%P(10)
+            end if
 
-        CMB%InitPower(1:num_initpower) = Params%P(index_initpower:index_initpower+num_initpower-1)
-        !CMB%InitPower(As_index) = exp(CMB%InitPower(As_index))
-        CMB%InitPower(As_index) = CMB%InitPower(As_index) *10 !input is 10^9 As, cl_norm = 1e-10
+            CMB%InitPower(1:num_initpower) = Params%P(index_initpower:index_initpower+num_initpower-1)
+            !CMB%InitPower(As_index) = exp(CMB%InitPower(As_index))
+            CMB%InitPower(As_index) = CMB%InitPower(As_index) *10 !input is 10^9 As, cl_norm = 1e-10
 
-        CMB%zre=0
-        CMB%zre_delta = 1.5
-        CMB%tau=0
-        CMB%omdmh2 = CMB%omch2+ CMB%omnuh2
-        CMB%omdm = CMB%omdmh2/h2
-        CMB%omv = 1- CMB%omk - CMB%omb - CMB%omdm
-        CMB%nufrac=CMB%omnuh2/CMB%omdmh2
-        CMB%reserved=0
-        CMB%fdm=0
-        CMB%ALensf = 1
-        CMB%iso_cdm_correlated=0
-        CMB%Alens=1
-        CMB%omnuh2_sterile = 0
+            CMB%zre_delta = 0.5
+            CMB%omdmh2 = CMB%omch2+ CMB%omnuh2
+            CMB%omdm = CMB%omdmh2/h2
+            CMB%omv = 1- CMB%omk - CMB%omb - CMB%omdm
+            CMB%nufrac=CMB%omnuh2/CMB%omdmh2
+            CMB%reserved=0
+            CMB%fdm=0
+            CMB%ALensf = 1
+            CMB%iso_cdm_correlated=0
+            CMB%Alens=1
+            CMB%omnuh2_sterile = 0
+
+            temp = CosmoCalc%CMBToTheta(CMB) 
+            if (CMB%tau==0._mcp) then
+                CMB%zre=0
+            else
+                CMB%zre = CosmoCalc%GetZreFromTau(CMB, CMB%tau)
+            end if
+        end select
+        class default
+        call MpiStop('CosmologyParameterizations: Calculator is not TCosmologyCalculator')
     end select
     end subroutine AP_ParamArrayToTheoryParams
 
