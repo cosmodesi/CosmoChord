@@ -544,25 +544,23 @@
     class is (TCosmologyCalculator)
         select type (Theory)
         class is (TCosmoTheoryPredictions)
-            derived(1) = CMB%ombh2
-            derived(2) = CMB%omch2
-            derived(3) = CosmoCalc%CMBToTheta(CMB)*100
-
-
+            derived(1) = CosmoCalc%CMBToTheta(CMB)*100
+            derived(2) = CMB%ombh2
+            derived(3) = CMB%omch2
             derived(4) = CMB%omv
             derived(5) = CMB%omdmh2 + CMB%ombh2
             derived(6) = CMB%omnuh2
             derived(7) = (CMB%omdmh2 + CMB%ombh2)*CMB%h
-            derived(8) = log(CMB%InitPower(As_index))
-            derived(9) = Theory%Sigma_8
-            derived(10) = Theory%Sigma_8*((CMB%omdm+CMB%omb)/0.3)**0.5_mcp
-            derived(11) = Theory%Sigma_8*((CMB%omdm+CMB%omb))**0.5_mcp
-            derived(12) = Theory%Sigma_8*((CMB%omdm+CMB%omb))**0.25_mcp
+            derived(8) = Theory%Sigma_8
+            derived(9) = Theory%Sigma_8*((CMB%omdm+CMB%omb)/0.3)**0.5_mcp
+            derived(10) = Theory%Sigma_8*((CMB%omdm+CMB%omb))**0.5_mcp
+            derived(11) = Theory%Sigma_8*((CMB%omdm+CMB%omb))**0.25_mcp
 
-            derived(13)= Theory%Sigma_8/CMB%h**0.5_mcp
-            derived(14) = Theory%derived_parameters( derived_rdrag )*CMB%H0/100
-            derived(15) = Theory%Lensing_rms_deflect
-            derived(16) = CMB%zre
+            derived(12)= Theory%Sigma_8/CMB%h**0.5_mcp
+            derived(13) = Theory%derived_parameters( derived_rdrag )*CMB%H0/100
+            derived(14) = Theory%Lensing_rms_deflect
+            derived(15) = CMB%zre
+            derived(16) = log(CMB%InitPower(As_index))
             ix=16
             derived(ix+1) = derived(ix)*exp(-2*CMB%tau)  !A e^{-2 tau}
             ix = ix+2
