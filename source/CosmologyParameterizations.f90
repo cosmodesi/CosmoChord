@@ -426,7 +426,7 @@
     end if
 
     call this%Initialize(Ini,Names, 'paramnames/params_astro.paramnames', Config)
-    call this%SetTheoryParameterNumbers(10,last_power_index)
+    call this%SetTheoryParameterNumbers(11,last_power_index)
 
     end subroutine AP_Init
 
@@ -460,8 +460,19 @@
             CMB%H0 = Params%P(3)
             CMB%tau = Params%P(4)
             CMB%omk = Params%P(5)
+            CMB%nnu = Params%P(10) !3.046
+            !Params%P(6) is now mnu, where mnu is physical standard neutrino mass and we assume standard heating
             CMB%sum_mnu_standard = Params%P(6)
             CMB%omnuh2=Params%P(6)/neutrino_mass_fac*(standard_neutrino_neff/3)**0.75_mcp
+
+            !Params(7) is mass_sterile*Neff_sterile
+            CMB%omnuh2_sterile = Params%P(7)/neutrino_mass_fac
+            !we are using interpretation where there are degeneracy_factor neutrinos, each exactly thermal
+            !So internally 3.046 or 3.046/3 massive neutrnos. But mnu is the physical integer mass sum.
+            if (CMB%omnuh2_sterile >0 .and. CMB%nnu < standard_neutrino_neff) then
+                error=-1
+                call MpiStop('sterile neutrino mass required Neff>3.046')
+            end if
 
             CMB%h=CMB%H0/100
             h2 = CMB%h**2
@@ -471,13 +482,13 @@
             CMB%omc= omegam - CMB%omb - CMB%omnu
             CMB%omch2 = CMB%omc*h2
 
-            CMB%w =    Params%P(7)
-            CMB%wa =   Params%P(8)
-            CMB%nnu =  Params%P(9)
+            CMB%w =    Params%P(8)
+            CMB%wa =   Params%P(9)
+            CMB%nnu =  Params%P(10)
             if (CosmoSettings%bbn_consistency) then
                 CMB%YHe = BBN_YHe%Value(CMB%ombh2,CMB%nnu - standard_neutrino_neff,error)
             else
-                CMB%YHe = Params%P(10)
+                CMB%YHe = Params%P(11)
             end if
 
             CMB%InitPower(1:num_initpower) = Params%P(index_initpower:index_initpower+num_initpower-1)
@@ -494,7 +505,6 @@
             CMB%ALensf = 1
             CMB%iso_cdm_correlated=0
             CMB%Alens=1
-            CMB%omnuh2_sterile = 0
 
             temp = CosmoCalc%CMBToTheta(CMB) 
             if (CMB%tau==0._mcp) then
