@@ -33,3 +33,16 @@ sigma8*       \sigma_8
 S8*           S_8 #\sigma_8(\Omega_m/0.3)^{0.5}
 s8omegamp5*   \sigma_8 \Omega_m^{0.5}
 s8omegamp25*  \sigma_8 \Omega_m^{0.25}
+s8h5*         \sigma_8/h^{0.5}
+rdragh*       r_{\rm drag} h #Mpc
+rmsdeflect*   \langle d^2\rangle^{1/2}  #rms lensing deflection in arcmin (2<=L<=2000)
+zrei*         z_{\rm re}
+clamp*        10^9 A_s e^{-2\tau}   #parameter determining C_l amplitude
+DL40*         D_{40}   #L(L+1)C_L/2pi at L=40 in muK^2
+DL220*        D_{220}  #L(L+1)C_L/2pi at L=220 in muK^2
+DL810*        D_{810}  #L(L+1)C_L/2pi at L=810 in muK^2
+DL1420*       D_{1420} #L(L+1)C_L/2pi at L=1420 in muK^2
+DL2000*       D_{2000} #L(L+1)C_L/2pi at L=2000 in muK^2
+ns02*         n_{s,0.002}
+yheused*      Y_P #MCMC value or from bbn consistency (mass definition)
+YpBBN*        Y_P^{\rm{BBN}} #MCMC value or from bbn consistency (nucleon definition)
