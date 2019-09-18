@@ -41,6 +41,9 @@
     !Late-time parameterization using more astro parameter, H0, omegab, omegam
     Type, extends(TCosmologyParameterization) :: AstroParameterization
         real(mcp) :: ombh2_prior_mean = 0._mcp, ombh2_prior_std = 0._mcp
+        real(mcp) :: sterile_mphys_max = 10 !maximum allowed physical mass of thermal sterile neutrino in eV
+        real(mcp) :: use_min_zre = 0._mcp
+        real(mcp) :: zre_prior_mean = 0._mcp, zre_prior_std = 0._mcp
         integer :: num_derived = 0
     contains
     procedure :: ParamArrayToTheoryParams => AP_ParamArrayToTheoryParams
@@ -421,12 +424,26 @@
     class(TGeneralConfig), target :: Config
     character(LEN=:), pointer :: prior
 
+    call Ini%Read('use_min_zre',this%use_min_zre)
+    call Ini%Read('sterile_mphys_max',this%sterile_mphys_max)
     prior => Ini%Read_String('prior[omegabh2]',NotFoundFail=.false.)
     if (prior/='') then
         read(prior,*) this%ombh2_prior_mean, this%ombh2_prior_std
     end if
+    prior => Ini%Read_String('zre_prior',NotFoundFail=.false.)
+    if (prior/='') then
+        read(prior,*) this%zre_prior_mean, this%zre_prior_std
+    end if
 
     call this%Initialize(Ini,Names, 'paramnames/params_astro.paramnames', Config)
+    if (CosmoSettings%bbn_consistency) call Names%Add('paramnames/derived_bbn.paramnames')
+    call Names%Add('paramnames/derived_theory.paramnames')
+    if (CosmoSettings%use_LSS) call Names%Add('paramnames/derived_LSS.paramnames')
+    if (CosmoSettings%compute_tensors) call Names%Add('paramnames/derived_tensors.paramnames')
+    !Add output ranges to match priors
+    call Names%AddDerivedRange('zrei', mn=this%use_min_zre)
+    this%num_derived = Names%num_derived
+    !set number of hard parameters, number of initial power spectrum parameters
     call this%SetTheoryParameterNumbers(16,last_power_index)
 
     end subroutine AP_Init
@@ -438,9 +455,18 @@
 
     select type (CMB)
     class is (CMBParams)
+        AP_NonBaseParameterPriors = logZero
+        if (CMB%zre < this%Use_min_zre) return
+        if (CMB%omnuh2_sterile > 0 .and. CMB%nnu > standard_neutrino_neff) then
+            !Check if physical mass of thermal massive sterile too big (look like CDM, so don't need to model separately)
+            if (CMB%omnuh2_sterile*neutrino_mass_fac/(CMB%nnu-standard_neutrino_neff)**0.75_mcp > this%sterile_mphys_max) return
+        end if
         AP_NonBaseParameterPriors = 0
         if (this%ombh2_prior_mean/=0._mcp) then
             AP_NonBaseParameterPriors = ((CMB%ombh2 - this%ombh2_prior_mean)/this%ombh2_prior_std)**2/2
+        end if
+        if (this%zre_prior_mean/=0._mcp) then
+            AP_NonBaseParameterPriors = AP_NonBaseParameterPriors + ((CMB%zre - this%zre_prior_mean)/this%zre_prior_std)**2/2
         end if
     end select
     end function AP_NonBaseParameterPriors
@@ -448,14 +474,34 @@
     subroutine AP_ParamArrayToTheoryParams(this, Params, CMB)
     class(AstroParameterization) :: this
     class(TCalculationAtParamPoint) :: Params
-    class(TTheoryParams), target :: CMB
-    real(mcp) omegam, h2, temp
+    integer, parameter :: ncache =2
+    Class(TTheoryParams), target :: CMB
+    Type(CMBParams), save :: LastCMB(ncache)
+    real(mcp) omegam, h2
+    integer, save :: cache=1
+    integer i
+    Type(CMBParams), pointer :: CP2
     integer error
 
     select type(CosmoCalc=>this%Config%Calculator)
     class is (TCosmologyCalculator)
         select type (CMB)
         class is (CMBParams)
+            do i=1, ncache
+                !want to save two slow positions for some fast-slow methods
+                if (all(Params%P(1:num_hard) == LastCMB(i)%BaseParams(1:num_hard))) then
+                    CP2 => CMB !needed to make next line work for some odd reason CMB=LastCMB(i) does not work
+                    CP2 = LastCMB(i)
+                    call this%TCosmologyParameterization%ParamArrayToTheoryParams(Params, CMB)
+                    CMB%InitPower(1:num_initpower) = Params%P(index_initpower:index_initpower+num_initpower-1)
+                    !CMB%InitPower(As_index) = exp(CMB%InitPower(As_index))
+                    CMB%InitPower(As_index) = CMB%InitPower(As_index) *10 !input is 10^9 As, cl_norm = 1e-10
+                    return
+                end if
+            end do
+            call this%TCosmologyParameterization%ParamArrayToTheoryParams(Params, CMB)
+
+            error = 0   !JD to prevent stops when using bbn_consistency or m_sterile
             CMB%reserved=0
             omegam = Params%P(1)
             CMB%omb= Params%P(2)
@@ -465,7 +511,7 @@
             CMB%w =    Params%P(8)
             CMB%wa =   Params%P(9)
             CMB%nnu =  Params%P(10)
-            !Params%P(6) is now mnu, where mnu is physical standard neutrino mass and we assume standard heating
+            !Params(6) is now mnu, where mnu is physical standard neutrino mass and we assume standard heating
             CMB%sum_mnu_standard = Params%P(6)
             if (CMB%nnu > standard_neutrino_neff .or. CosmoSettings%neutrino_hierarchy /= neutrino_hierarchy_degenerate) then
                 CMB%omnuh2=Params%P(6)/neutrino_mass_fac*(standard_neutrino_neff/3)**0.75_mcp
@@ -478,7 +524,6 @@
             !So internally 3.046 or 3.046/3 massive neutrnos. But mnu is the physical integer mass sum.
             if (CMB%omnuh2_sterile >0 .and. CMB%nnu < standard_neutrino_neff) then
                 error=-1
-                call MpiStop('sterile neutrino mass required Neff>3.046')
             end if
             CMB%omnuh2 = CMB%omnuh2 + CMB%omnuh2_sterile
 
@@ -498,6 +543,7 @@
             if (CosmoSettings%bbn_consistency) then
                 CMB%YHe = BBN_YHe%Value(CMB%ombh2,CMB%nnu - standard_neutrino_neff,error)
             else
+                !e.g. set from free parameter..
                 CMB%YHe = Params%P(11)
             end if
 
@@ -511,16 +557,23 @@
             !CMB%InitPower(As_index) = exp(CMB%InitPower(As_index))
             CMB%InitPower(As_index) = CMB%InitPower(As_index) *10 !input is 10^9 As, cl_norm = 1e-10
 
-            temp = CosmoCalc%CMBToTheta(CMB) 
+            if(error/=0)then
+                return
+            end if
+            CMB%reserved(1) = CosmoCalc%CMBToTheta(CMB) * 100
             if (CMB%tau==0._mcp) then
                 CMB%zre=0
             else
                 CMB%zre = CosmoCalc%GetZreFromTau(CMB, CMB%tau)
             end if
+
+            LastCMB(cache) = CMB
+            cache = mod(cache,ncache)+1
         end select
         class default
         call MpiStop('CosmologyParameterizations: Calculator is not TCosmologyCalculator')
     end select
+
     end subroutine AP_ParamArrayToTheoryParams
 
 
@@ -535,80 +588,77 @@
     real(mcp) z
     integer, parameter :: derivedCL(5) = [40, 220, 810, 1420, 2000]
 
-    allocate(Derived(9))
-
-    call this%ParamArrayToTheoryParams(Params,CMB)
-
     if (.not. allocated(Theory)) call MpiStop('Not allocated theory!!!')
-    select type(CosmoCalc=>this%Config%Calculator)
-    class is (TCosmologyCalculator)
-        select type (Theory)
-        class is (TCosmoTheoryPredictions)
-            derived(1) = CosmoCalc%CMBToTheta(CMB)*100
-            derived(2) = CMB%ombh2
-            derived(3) = CMB%omch2
-            derived(4) = CMB%omv
-            derived(5) = CMB%omdmh2 + CMB%ombh2
-            derived(6) = CMB%omnuh2
-            derived(7) = (CMB%omdmh2 + CMB%ombh2)*CMB%h
-            derived(8) = Theory%Sigma_8
-            derived(9) = Theory%Sigma_8*((CMB%omdm+CMB%omb)/0.3)**0.5_mcp
-            derived(10) = Theory%Sigma_8*((CMB%omdm+CMB%omb))**0.5_mcp
-            derived(11) = Theory%Sigma_8*((CMB%omdm+CMB%omb))**0.25_mcp
+    select type (Theory)
+    class is (TCosmoTheoryPredictions)
+        allocate(Derived(this%num_derived), source=0._mcp)
 
-            derived(12)= Theory%Sigma_8/CMB%h**0.5_mcp
-            derived(13) = Theory%derived_parameters( derived_rdrag )*CMB%H0/100
-            derived(14) = Theory%Lensing_rms_deflect
-            derived(15) = CMB%zre
-            derived(16) = log(CMB%InitPower(As_index))
-            ix=16
-            derived(ix+1) = derived(ix)*exp(-2*CMB%tau)  !A e^{-2 tau}
-            ix = ix+2
+        call this%ParamArrayToTheoryParams(Params,CMB)
 
-            if(CosmoSettings%use_CMB .and. allocated(Theory%Cls(1,1)%CL)) then
-                !L(L+1)C_L/2pi at various places
-                derived(ix:ix+size(DerivedCL)-1) = Theory%Cls(1,1)%CL(derivedCL)
-            end if
-            ix = ix+size(derivedCL)
+        derived(1) = CMB%reserved(1)
+        derived(2) = CMB%ombh2
+        derived(3) = CMB%omch2
+        derived(4) = CMB%omv
+        derived(5) = CMB%omdmh2 + CMB%ombh2
+        derived(6) = CMB%omnuh2
+        derived(7) = (CMB%omdmh2 + CMB%ombh2)*CMB%h
+        derived(8) = Theory%Sigma_8
+        derived(9) = Theory%Sigma_8*((CMB%omdm+CMB%omb)/0.3)**0.5_mcp
+        derived(10) = Theory%Sigma_8*((CMB%omdm+CMB%omb))**0.5_mcp
+        derived(11) = Theory%Sigma_8*((CMB%omdm+CMB%omb))**0.25_mcp
 
-            lograt = log(0.002_mcp/CosmoSettings%pivot_k)   !get ns at k=0.002
-            derived(ix) = CMB%InitPower(ns_index) +CMB%InitPower(nrun_index)*lograt +&
-                CMB%InitPower(nrunrun_index)*lograt**2/2
-            ix=ix+1
+        derived(12)= Theory%Sigma_8/CMB%h**0.5_mcp
+        derived(13) = Theory%derived_parameters( derived_rdrag )*CMB%H0/100
+        derived(14) = Theory%Lensing_rms_deflect
+        derived(15) = CMB%zre
+        derived(16) = log(CMB%InitPower(As_index))
+        ix=16
+        derived(ix+1) = cl_norm*CMB%InitPower(As_index)*1e9*exp(-2*CMB%tau)  !A e^{-2 tau}
+        ix = ix+2
 
-            derived(ix)= CMB%Yhe !value actually used, may be set from bbn consistency
-            derived(ix+1)= GetYpBBN(CMB%Yhe) !same, as nucleon ratio definition
-            ix = ix+2
+        if(CosmoSettings%use_CMB .and. allocated(Theory%Cls(1,1)%CL)) then
+            !L(L+1)C_L/2pi at various places
+            derived(ix:ix+size(DerivedCL)-1) = Theory%Cls(1,1)%CL(derivedCL)
+        end if
+        ix = ix+size(derivedCL)
 
-            if (CosmoSettings%bbn_consistency) then
-                derived(ix) = 1d5*BBN_DH%Value(CMB%ombh2,CMB%nnu - standard_neutrino_neff)
-                ix =ix + 1
-            end if
+        lograt = log(0.002_mcp/CosmoSettings%pivot_k)   !get ns at k=0.002
+        derived(ix) = CMB%InitPower(ns_index) +CMB%InitPower(nrun_index)*lograt +&
+            CMB%InitPower(nrunrun_index)*lograt**2/2
+        ix=ix+1
 
-            derived(ix:ix + Theory%numderived-1) = Theory%derived_parameters(1: Theory%numderived)
-            ix = ix + Theory%numderived
+        derived(ix)= CMB%Yhe !value actually used, may be set from bbn consistency
+        derived(ix+1)= GetYpBBN(CMB%Yhe) !same, as nucleon ratio definition
+        ix = ix+2
 
-            if (CosmoSettings%Use_LSS) then
-                ! f sigma_8 at specified redshift
-                do i=1,size(CosmoSettings%z_outputs)
-                    z =  CosmoSettings%z_outputs(i)
-                    derived(ix) = Theory%growth_z%Value(z)
-                    derived(ix+1) = Theory%sigma8_z%Value(z)
-                    ix = ix + 2
-                end do
-            end if
+        if (CosmoSettings%bbn_consistency) then
+            derived(ix) = 1d5*BBN_DH%Value(CMB%ombh2,CMB%nnu - standard_neutrino_neff)
+            ix =ix + 1
+        end if
 
-            if (CosmoSettings%Compute_tensors) then
-                derived(ix:ix+5) = [Theory%tensor_ratio_02, Theory%tensor_ratio_BB, log(max(1e-15_mcp,Theory%tensor_AT)*1e10_mcp), &
-                    Theory%tensor_ratio_C10, Theory%tensor_AT*1e9, Theory%tensor_AT*1e9*exp(-2*CMB%tau) ]
-                ix=ix+6
-            end if
+        derived(ix:ix + Theory%numderived-1) = Theory%derived_parameters(1: Theory%numderived)
+        ix = ix + Theory%numderived
 
-            if (ix - 1 /= this%num_derived) then
-                write(*,*) 'num_derived =', this%num_derived, '; ix, Theory%numderived = ', ix, Theory%numderived
-                call MpiStop('AP_CalcDerivedParams error in derived parameter numbers')
-            end if
-        end select
+        if (CosmoSettings%Use_LSS) then
+            ! f sigma_8 at specified redshift
+            do i=1,size(CosmoSettings%z_outputs)
+                z =  CosmoSettings%z_outputs(i)
+                derived(ix) = Theory%growth_z%Value(z)
+                derived(ix+1) = Theory%sigma8_z%Value(z)
+                ix = ix + 2
+            end do
+        end if
+
+        if (CosmoSettings%Compute_tensors) then
+            derived(ix:ix+5) = [Theory%tensor_ratio_02, Theory%tensor_ratio_BB, log(max(1e-15_mcp,Theory%tensor_AT)*1e10_mcp), &
+                Theory%tensor_ratio_C10, Theory%tensor_AT*1e9, Theory%tensor_AT*1e9*exp(-2*CMB%tau) ]
+            ix=ix+6
+        end if
+
+        if (ix - 1 /= this%num_derived) then
+            write(*,*) 'num_derived =', this%num_derived, '; ix, Theory%numderived = ', ix, Theory%numderived
+            call MpiStop('AP_CalcDerivedParams error in derived parameter numbers')
+        end if
     end select
 
     end subroutine AP_CalcDerivedParams
