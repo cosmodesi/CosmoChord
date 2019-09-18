@@ -149,12 +149,6 @@
                 if (l >= 2) then
                     clik_cl_and_pars(j) = CLs%CL(L)/real(l*(l+1),mcp)*twopi
                 end if
-                ! Guard against clik errors
-                if (i==2 .and. l<=29 .and. CLs%CL(L)>=0.29) then
-                    global_error_flag = 1
-                    clik_lnlike = logzero
-                    return
-                end if
                 j = j+1
             end do
         end associate

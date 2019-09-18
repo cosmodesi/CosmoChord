@@ -316,7 +316,7 @@ cleancosmomc:
 	rm -rf Debug*
 
 cleanpolychord:
-	cd ../polychord; $(MAKE) clean
+	cd ../polychord; $(MAKE) veryclean
 
 getdist: directories $(DISTFILES)
 	$(F90C) -o ../getdist $(DISTFILES) $(LAPACKL) $(GETDISTFLAGS)
