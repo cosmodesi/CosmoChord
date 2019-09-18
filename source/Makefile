@@ -138,7 +138,6 @@ CALCFILES = $(OUTPUT_DIR)/Calculator_CAMB.o
 #Can use params_H if you prefer more generic parameters
 PARAMETERIZATION = $(OUTPUT_DIR)/CosmologyParameterizations.o
 
-GETDISTFLAGS = $(FFLAGS) $(IFLAG)$(FORUTILSPATH)/$(OUTPUT_DIR)/
 F90FLAGS = $(FFLAGS) $(IFLAG)../camb/fortran/$(OUTPUT_DIR) $(IFLAG)$(FORUTILSPATH)/$(OUTPUT_DIR)/ $(INCLUDE)
 LINKFLAGS = -L../camb/fortran/$(OUTPUT_DIR) -lcamb -L$(FORUTILSPATH)/$(OUTPUT_DIR) -lforutils $(LAPACKL) $(F90CRLINK) $(CLIKL)
 
@@ -153,10 +152,6 @@ endif
 #PolyChord Library
 LINKFLAGS += -L../polychord/lib -lchord
 F90FLAGS += $(IFLAG)../polychord/src/polychord/
-
-DISTFILES = $(OUTPUT_DIR)/ObjectParamNames.o  \
-    $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/samples.o $(OUTPUT_DIR)/IO.o $(OUTPUT_DIR)/GetDist.o
-
 
 ifneq ($(PRECISION),)
 FFLAGS += -D$(PRECISION) -DMATRIX_$(PRECISION)
@@ -220,7 +215,6 @@ $(OUTPUT_DIR)/settings.o:  $(OUTPUT_DIR)/ObjectParamNames.o
 $(OUTPUT_DIR)/propose.o: $(OUTPUT_DIR)/settings.o $(OUTPUT_DIR)/GeneralTypes.o
 $(OUTPUT_DIR)/IO.o: $(OUTPUT_DIR)/settings.o
 $(OUTPUT_DIR)/samples.o: $(OUTPUT_DIR)/settings.o
-$(OUTPUT_DIR)/GetDist.o: $(OUTPUT_DIR)/IO.o $(OUTPUT_DIR)/samples.o
 
 $(OUTPUT_DIR)/CalcLike_Cosmology.o: $(OUTPUT_DIR)/calclike.o
 
