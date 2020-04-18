@@ -24,6 +24,10 @@ matrix:
     - name: "GCC-trunk"
       env:
         - GCCTAG="devel"
+  allow_failures:
+    - name: "GCC-trunk"
+      env:
+        - GCCTAG="devel"
 
 env:
   global:
