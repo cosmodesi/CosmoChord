@@ -3,7 +3,6 @@
     use CosmologyTypes
     use CosmoTheory
     use settings
-    use config
     use Likelihood_Cosmology
     implicit none
 

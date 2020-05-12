@@ -309,6 +309,8 @@ cosmomc_debug: directories polychord camb $(OBJFILES)
 
 clean: cleancosmomc cleanpolychord 
 	cd ../camb/forutils; make clean
+	cd ../camb/fortran; make clean
+
 
 cleancosmomc:
 	rm -f $(OUTPUT_DIR)/*.o $(OUTPUT_DIR)/*.mod ../core

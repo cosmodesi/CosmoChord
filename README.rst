@@ -33,8 +33,6 @@ To run, you should add ``action=5``  to your ini file, and include
 
 If you wish to use Planck data, you should follow the `CosmoMC planck instructions <https://cosmologist.info/cosmomc/readme_planck.html>`__, and then run ``make clean; make`` after ``source bin/clik_profile.sh`` 
 
-
-
 Changes
 =======
 You can see the key changes by running:
