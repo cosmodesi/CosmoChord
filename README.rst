@@ -16,13 +16,14 @@ Description and installation
 =============================
 
 CosmoChord is a fork of `CosmoMC <https://github.com/cmbant/CosmoMC>`__, which
-adds nested sampling provided by PolyChord.
+adds nested sampling provided by PolyChord. This is the CosmoChord version for 
+the DESI collaboration
 
 Installation procedure:
 
 .. bash::
    
-   git clone --recursive https://github.com/williamjameshandley/CosmoChord
+   git clone --recursive https://github.com/cosmodesi/CosmoChord.git
    cd CosmoChord
    make
    export OMP_NUM_THREADS=1
