@@ -1,0 +1,15 @@
+#Data file for DESI forecasts, produced by Lado Samushia.
+
+name = DESI_FORECAST_LRG_095
+
+num_bao=3
+
+bao_measurements_file = desi_forecast_0.95.dat
+bao_measurements_file_has_error = F
+
+#stored values are actually scaled by r_fid, so include that here
+#Fiducial sound horizon from Alam et al. (2017)
+#rs_rescale = 1/147.78 
+rs_rescale = .6766815537e-2
+
+bao_cov_file = cov_lrg_0.95.txt
